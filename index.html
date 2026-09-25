@@ -1,381 +1,406 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avatar Interactivo por Voz</title>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --accent-color: #38bdf8;
-      --accent-hover: #0284c7;
-      --text-color: #f8fafc;
-      --muted-text: #94a3b8;
-      --success-color: #22c55e;
-      --danger-color: #ef4444;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar Interactivo por Voz</title>
+<style>
+:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --accent-color: #38bdf8;
+  --accent-hover: #0284c7;
+  --text-color: #f8fafc;
+  --muted-text: #94a3b8;
+  --success-color: #22c55e;
+  --danger-color: #ef4444;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+}
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent-color);
+}
+p.subtitle {
+  color: var(--muted-text);
+  font-size: 0.95rem;
+}
+.container {
+  width: 100%;
+  max-width: 550px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.card {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+.avatar-display {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 420px;
+  background-color: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
+/* Doble reproductor superpuesto para fundido cruzado */
+.avatar-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+  pointer-events: none;
+}
+.avatar-video.active {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem 1rem;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 0.5rem;
-      color: var(--accent-color);
-    }
-
-    p.subtitle {
-      color: var(--muted-text);
-      font-size: 0.95rem;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 550px;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.25rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    .avatar-display {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 9 / 16;
-      max-height: 420px;
-      background-color: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .badge {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(4px);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .indicator {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: var(--muted-text);
-    }
-
-    .indicator.active {
-      background-color: var(--success-color);
-      box-shadow: 0 0 8px var(--success-color);
-    }
-
-    .inputs-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    @media (max-width: 480px) {
-      .inputs-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .input-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--accent-color);
-    }
-
-    input[type="file"] {
-      font-size: 0.8rem;
-      color: var(--muted-text);
-      background: #0f172a;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #334155;
-      width: 100%;
-    }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      align-items: center;
-    }
-
-    button.btn-mic {
-      width: 100%;
-      padding: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background-color: var(--accent-color);
-      color: #0f172a;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-
-    button.btn-mic.listening {
-      background-color: var(--danger-color);
-      color: white;
-    }
-
-    .command-log {
-      font-size: 0.9rem;
-      color: var(--muted-text);
-      text-align: center;
-      min-height: 1.5em;
-    }
-
-    .instructions {
-      font-size: 0.85rem;
-      color: var(--muted-text);
-      line-height: 1.4;
-    }
-
-    .instructions ol {
-      padding-left: 1.2rem;
-      margin-top: 0.5rem;
-    }
-  </style>
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+.indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--muted-text);
+}
+.indicator.active {
+  background-color: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+.inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 480px) {
+  .inputs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+input[type="file"] {
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  background: #0f172a;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  width: 100%;
+}
+.btn-test {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  background: #334155;
+  color: var(--text-color);
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-test:hover {
+  background: #475569;
+}
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: center;
+}
+button.btn-mic {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--accent-color);
+  color: #0f172a;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+button.btn-mic.listening {
+  background-color: var(--danger-color);
+  color: white;
+}
+.command-log {
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  text-align: center;
+  min-height: 1.5em;
+}
+.instructions {
+  font-size: 0.85rem;
+  color: var(--muted-text);
+  line-height: 1.4;
+}
+.instructions ol {
+  padding-left: 1.2rem;
+  margin-top: 0.5rem;
+}
+</style>
 </head>
 <body>
-
-  <header>
-    <h1>Avatar Interactivo por Voz</h1>
-    <p class="subtitle">Carga 4 videos y controla la acción hablando</p>
-  </header>
-
-  <div class="container">
-    <!-- Reproductor de Avatar -->
-    <div class="card">
-      <div class="avatar-display">
-        <video id="avatarVideo" autoplay loop muted playsinline></video>
-        <div class="badge">
-          <span class="indicator" id="micIndicator"></span>
-          <span id="statusText">Esperando videos...</span>
-        </div>
+<header>
+  <h1>Avatar Interactivo por Voz</h1>
+  <p class="subtitle">Carga 4 videos y controla la acción hablando</p>
+</header>
+<div class="container">
+  <!-- Reproductor con doble tag <video> superpuesto -->
+  <div class="card">
+    <div class="avatar-display">
+      <video id="avatarVideo1" class="avatar-video active" autoplay muted playsinline></video>
+      <video id="avatarVideo2" class="avatar-video" autoplay muted playsinline></video>
+      <div class="badge">
+        <span class="indicator" id="micIndicator"></span>
+        <span id="statusText">Esperando videos...</span>
       </div>
-    </div>
-
-    <!-- Carga de Videos del Celular -->
-    <div class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 0.8rem;">1. Selecciona los 4 Videos</h2>
-      <div class="inputs-grid">
-        <div class="input-group">
-          <label for="videoQuieto">Video "Quieto" (Reposo):</label>
-          <input type="file" id="videoQuieto" accept="video/*">
-        </div>
-        <div class="input-group">
-          <label for="videoDerecha">Video "Derecha":</label>
-          <input type="file" id="videoDerecha" accept="video/*">
-        </div>
-        <div class="input-group">
-          <label for="videoIzquierda">Video "Izquierda":</label>
-          <input type="file" id="videoIzquierda" accept="video/*">
-        </div>
-        <div class="input-group">
-          <label for="videoSonrie">Video "Sonríe":</label>
-          <input type="file" id="videoSonrie" accept="video/*">
-        </div>
-      </div>
-    </div>
-
-    <!-- Control por Voz -->
-    <div class="card controls">
-      <h2 style="font-size: 1.05rem; width: 100%;">2. Control por Voz</h2>
-      <button id="toggleMicBtn" class="btn-mic">🎙️ Activar Micrófono</button>
-      <div class="command-log" id="commandLog">Comando detectado: Ninguno</div>
-    </div>
-
-    <!-- Lista de Comandos -->
-    <div class="card instructions">
-      <strong>Comandos reconocidos:</strong>
-      <ol>
-        <li><strong>"Quieto"</strong>: Mantiene al avatar en posición de reposo (bucle).</li>
-        <li><strong>"Derecha"</strong>: Ejecuta el video hacia la derecha.</li>
-        <li><strong>"Izquierda"</strong>: Ejecuta el video hacia la izquierda.</li>
-        <li><strong>"Sonríe" / "Sonrie"</strong>: Ejecuta la animación sonriendo.</li>
-      </ol>
     </div>
   </div>
 
-  <script>
-    const avatarVideo = document.getElementById('avatarVideo');
-    const toggleMicBtn = document.getElementById('toggleMicBtn');
-    const micIndicator = document.getElementById('micIndicator');
-    const statusText = document.getElementById('statusText');
-    const commandLog = document.getElementById('commandLog');
+  <!-- Carga de Videos con Botones de Prueba -->
+  <div class="card">
+    <h2 style="font-size: 1.05rem; margin-bottom: 0.8rem;">1. Selecciona los 4 Videos</h2>
+    <div class="inputs-grid">
+      <div class="input-group">
+        <label for="videoQuieto">Video "Quieto" (Reposo):</label>
+        <input type="file" id="videoQuieto" accept="video/*">
+        <button type="button" class="btn-test" onclick="playVideo('quieto', true)">▶️ Probar Quieto</button>
+      </div>
+      <div class="input-group">
+        <label for="videoDerecha">Video "Derecha":</label>
+        <input type="file" id="videoDerecha" accept="video/*">
+        <button type="button" class="btn-test" onclick="playVideo('derecha', false)">▶️ Probar Derecha</button>
+      </div>
+      <div class="input-group">
+        <label for="videoIzquierda">Video "Izquierda":</label>
+        <input type="file" id="videoIzquierda" accept="video/*">
+        <button type="button" class="btn-test" onclick="playVideo('izquierda', false)">▶️ Probar Izquierda</button>
+      </div>
+      <div class="input-group">
+        <label for="videoSonrie">Video "Sonríe":</label>
+        <input type="file" id="videoSonrie" accept="video/*">
+        <button type="button" class="btn-test" onclick="playVideo('sonrie', false)">▶️ Probar Sonríe</button>
+      </div>
+    </div>
+  </div>
 
-    const videoMap = {
-      quieto: null,
-      derecha: null,
-      izquierda: null,
-      sonrie: null
-    };
+  <!-- Control por Voz -->
+  <div class="card controls">
+    <h2 style="font-size: 1.05rem; width: 100%;">2. Control por Voz</h2>
+    <button id="toggleMicBtn" class="btn-mic">🎙️ Activar Micrófono</button>
+    <div class="command-log" id="commandLog">Comando detectado: Ninguno</div>
+  </div>
 
-    let currentCommand = 'quieto';
-    let isListening = false;
-    let recognition = null;
+  <!-- Lista de Comandos -->
+  <div class="card instructions">
+    <strong>Comandos reconocidos:</strong>
+    <ol>
+      <li><strong>"Quieto"</strong>: Mantiene al avatar en posición de reposo (bucle).</li>
+      <li><strong>"Derecha"</strong>: Ejecuta la acción y se detiene en el último fotograma.</li>
+      <li><strong>"Izquierda"</strong>: Ejecuta la acción y se detiene en el último fotograma.</li>
+      <li><strong>"Sonríe" / "Sonrie"</strong>: Ejecuta la acción y se detiene en el último fotograma.</li>
+    </ol>
+  </div>
+</div>
 
-    document.getElementById('videoQuieto').addEventListener('change', (e) => loadVideo('quieto', e.target.files[0]));
-    document.getElementById('videoDerecha').addEventListener('change', (e) => loadVideo('derecha', e.target.files[0]));
-    document.getElementById('videoIzquierda').addEventListener('change', (e) => loadVideo('izquierda', e.target.files[0]));
-    document.getElementById('videoSonrie').addEventListener('change', (e) => loadVideo('sonrie', e.target.files[0]));
+<script>
+const video1 = document.getElementById('avatarVideo1');
+const video2 = document.getElementById('avatarVideo2');
+const toggleMicBtn = document.getElementById('toggleMicBtn');
+const micIndicator = document.getElementById('micIndicator');
+const statusText = document.getElementById('statusText');
+const commandLog = document.getElementById('commandLog');
 
-    function loadVideo(type, file) {
-      if (file) {
-        if (videoMap[type]) URL.revokeObjectURL(videoMap[type]);
-        videoMap[type] = URL.createObjectURL(file);
-        
-        if (type === 'quieto' && currentCommand === 'quieto') {
-          playVideo('quieto', true);
-        }
-      }
-    }
+let activeVideo = video1;
+let inactiveVideo = video2;
 
-    function playVideo(command, isLooping = false) {
-      if (!videoMap[command]) {
-        commandLog.textContent = `⚠️ Sube el video para el comando "${command}"`;
-        return;
-      }
+const videoMap = {
+  quieto: null,
+  derecha: null,
+  izquierda: null,
+  sonrie: null
+};
 
-      currentCommand = command;
-      avatarVideo.src = videoMap[command];
-      avatarVideo.loop = isLooping;
-      
-      avatarVideo.play().catch(err => {
-        avatarVideo.muted = true;
-        avatarVideo.play();
-      });
+let currentCommand = 'quieto';
+let isListening = false;
+let recognition = null;
 
-      statusText.textContent = `Estado: ${command.toUpperCase()}`;
-    }
+// CORRECCIÓN CLAVE: Pasar el primer archivo e.target.files[0]
+document.getElementById('videoQuieto').addEventListener('change', (e) => loadVideo('quieto', e.target.files[0]));
+document.getElementById('videoDerecha').addEventListener('change', (e) => loadVideo('derecha', e.target.files[0]));
+document.getElementById('videoIzquierda').addEventListener('change', (e) => loadVideo('izquierda', e.target.files[0]));
+document.getElementById('videoSonrie').addEventListener('change', (e) => loadVideo('sonrie', e.target.files[0]));
 
-    // Al finalizar un movimiento, regresa automáticamente al estado "Quieto"
-    avatarVideo.addEventListener('ended', () => {
-      if (currentCommand !== 'quieto') {
-        playVideo('quieto', true);
-      }
+function loadVideo(type, file) {
+  if (!file) return;
+  
+  if (videoMap[type]) URL.revokeObjectURL(videoMap[type]);
+  videoMap[type] = URL.createObjectURL(file);
+  commandLog.textContent = `✅ Video "${type}" cargado correctamente`;
+
+  // Si se carga el video de reposo, reproducirlo inmediatamente
+  if (type === 'quieto' && currentCommand === 'quieto') {
+    playVideo('quieto', true);
+  }
+}
+
+function playVideo(command, isLooping = false) {
+  if (!videoMap[command]) {
+    commandLog.textContent = `⚠️ Primero debes cargar el video para "${command}"`;
+    return;
+  }
+  currentCommand = command;
+
+  // Preparar el video en el reproductor oculto
+  inactiveVideo.src = videoMap[command];
+  inactiveVideo.loop = isLooping;
+  inactiveVideo.muted = true;
+
+  const playPromise = inactiveVideo.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      // Activar transición CSS de opacidad (0.4s)
+      inactiveVideo.classList.add('active');
+      activeVideo.classList.remove('active');
+
+      // Intercambiar referencias
+      const temp = activeVideo;
+      activeVideo = inactiveVideo;
+      inactiveVideo = temp;
+
+      // Pausar el reproductor saliente tras completar el fundido
+      setTimeout(() => {
+        inactiveVideo.pause();
+      }, 400);
+    }).catch(err => {
+      console.error("Error al reproducir video:", err);
+      commandLog.textContent = `❌ Error al reproducir "${command}"`;
     });
+  }
 
-    // Inicialización del Reconocimiento de Voz
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  statusText.textContent = `Estado: ${command.toUpperCase()}`;
+}
 
-    if (!SpeechRecognition) {
-      alert("Tu navegador no soporta la Web Speech API. Usa Google Chrome o Microsoft Edge.");
-      toggleMicBtn.disabled = true;
+// Reconocimiento de voz
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) {
+  alert("Tu navegador no soporta la Web Speech API. Usa Google Chrome o Microsoft Edge.");
+  toggleMicBtn.disabled = true;
+} else {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const lastIndex = event.results.length - 1;
+    // CORRECCIÓN CLAVE: Acceder al índice [0] del resultado
+    const transcript = event.results[lastIndex][0].transcript.toLowerCase().trim();
+    commandLog.textContent = `Escuchado: "${transcript}"`;
+
+    if (transcript.includes('derecha')) {
+      playVideo('derecha', false);
+    } else if (transcript.includes('izquierda')) {
+      playVideo('izquierda', false);
+    } else if (transcript.includes('sonríe') || transcript.includes('sonrie') || transcript.includes('sonria')) {
+      playVideo('sonrie', false);
+    } else if (transcript.includes('quieto') || transcript.includes('parado') || transcript.includes('stop')) {
+      playVideo('quieto', true);
+    }
+  };
+
+  recognition.onend = () => {
+    if (isListening) {
+      try { recognition.start(); } catch (e) {}
     } else {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'es-ES';
-      recognition.continuous = true;
-      recognition.interimResults = false;
-
-      recognition.onresult = (event) => {
-        const lastIndex = event.results.length - 1;
-        const transcript = event.results[lastIndex][0].transcript.toLowerCase().trim();
-        commandLog.textContent = `Escuchado: "${transcript}"`;
-
-        if (transcript.includes('derecha')) {
-          playVideo('derecha', false);
-        } else if (transcript.includes('izquierda')) {
-          playVideo('izquierda', false);
-        } else if (transcript.includes('sonríe') || transcript.includes('sonrie') || transcript.includes('sonria')) {
-          playVideo('sonrie', false);
-        } else if (transcript.includes('quieto') || transcript.includes('parado') || transcript.includes('stop')) {
-          playVideo('quieto', true);
-        }
-      };
-
-      recognition.onend = () => {
-        if (isListening) {
-          try { recognition.start(); } catch (e) {}
-        } else {
-          updateMicUI(false);
-        }
-      };
+      updateMicUI(false);
     }
+  };
+}
 
-    toggleMicBtn.addEventListener('click', () => {
-      if (!recognition) return;
-
-      if (!isListening) {
-        try {
-          recognition.start();
-          isListening = true;
-          updateMicUI(true);
-        } catch (e) {
-          console.error("Error al iniciar micrófono:", e);
-        }
-      } else {
-        isListening = false;
-        recognition.stop();
-        updateMicUI(false);
-      }
-    });
-
-    function updateMicUI(listening) {
-      if (listening) {
-        toggleMicBtn.classList.add('listening');
-        toggleMicBtn.textContent = "🔴 Detener Micrófono";
-        micIndicator.classList.add('active');
-        commandLog.textContent = "Escuchando comandos de voz...";
-      } else {
-        toggleMicBtn.classList.remove('listening');
-        toggleMicBtn.textContent = "🎙️ Activar Micrófono";
-        micIndicator.classList.remove('active');
-        commandLog.textContent = "Micrófono desactivado";
-      }
+toggleMicBtn.addEventListener('click', () => {
+  if (!recognition) return;
+  if (!isListening) {
+    try {
+      recognition.start();
+      isListening = true;
+      updateMicUI(true);
+    } catch (e) {
+      console.error("Error al iniciar micrófono:", e);
     }
-  </script>
+  } else {
+    isListening = false;
+    recognition.stop();
+    updateMicUI(false);
+  }
+});
+
+function updateMicUI(listening) {
+  if (listening) {
+    toggleMicBtn.classList.add('listening');
+    toggleMicBtn.textContent = "🔴 Detener Micrófono";
+    micIndicator.classList.add('active');
+    commandLog.textContent = "Escuchando comandos de voz...";
+  } else {
+    toggleMicBtn.classList.remove('listening');
+    toggleMicBtn.textContent = "🎙️ Activar Micrófono";
+    micIndicator.classList.remove('active');
+    commandLog.textContent = "Micrófono desactivado";
+  }
+}
+</script>
 </body>
 </html>
